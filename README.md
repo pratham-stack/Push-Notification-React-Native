@@ -1,79 +1,137 @@
 This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+Push Notification Implementation Using Firebase (React native )
 
-# Getting Started
+Create a Notification Service File
 
->**Note**: Make sure you have completed the [React Native - Environment Setup](https://reactnative.dev/docs/environment-setup) instructions till "Creating a new application" step, before proceeding.
+---------------------------------------->>>>>>>>>>>>>>>
 
-## Step 1: Start the Metro Server
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import messaging from '@react-native-firebase/messaging';
 
-First, you will need to start **Metro**, the JavaScript _bundler_ that ships _with_ React Native.
+export async function requestUserPermission() {
+  const authStatus = await messaging().requestPermission();
+  const enabled =
+    authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
+    authStatus === messaging.AuthorizationStatus.PROVISIONAL;
 
-To start Metro, run the following command from the _root_ of your React Native project:
+  if (enabled) {
+    console.log('Authorization status:', authStatus);
+    getFCMToken();
+  }
+}
 
-```bash
-# using npm
-npm start
+const getFCMToken = async () => {
+  let fcmToken = await AsyncStorage.getItem('fcmToken');
+  console.log('The old FCM token', fcmToken);
+  try {
+    if (!fcmToken) {
+      const fcmToken = await messaging().getToken();
+      if (fcmToken) {
+        console.log('The new FCM Token', fcmToken);
+        // await setItem('fcmToken', fcmToken);
+        await AsyncStorage.setItem('fcmToken', fcmToken);
+      }
+    }
+  } catch (error) {
+    console.log('fcmToken error', error);
+  }
+};
 
-# OR using Yarn
-yarn start
-```
+export const notificationListener = async () => {
 
-## Step 2: Start your Application
+  console.log("hello i am inside Notification Listener");
+  messaging().onNotificationOpenedApp(remoteMessage => {
+    console.log(
+      'Notification caused app to open from background state:',
+      remoteMessage.notification,
+    );
+    // navigation.navigate(remoteMessage.data.type);
+  });
 
-Let Metro Bundler run in its _own_ terminal. Open a _new_ terminal from the _root_ of your React Native project. Run the following command to start your _Android_ or _iOS_ app:
+  //for foreground
+  messaging().onMessage(async remoteMessage => {
+    console.log('received in foreground', remoteMessage);
+  });
 
-### For Android
+  // Check whether an initial notification is available
+  messaging()
+    .getInitialNotification()
+    .then(remoteMessage => {
+      if (remoteMessage) {
+        console.log(
+          'Notification caused app to open from quit state:',
+          remoteMessage.notification,
+        );
+        // setInitialRoute(remoteMessage.data.type); // e.g. "Settings"
+      }
+    });
+};
 
-```bash
-# using npm
-npm run android
 
-# OR using Yarn
-yarn android
-```
+------------------------------------------------------->>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
-### For iOS
 
-```bash
-# using npm
-npm run ios
+App.js 
 
-# OR using Yarn
-yarn ios
-```
+/**
+ * Sample React Native App
+ * https://github.com/facebook/react-native
+ *
+ * @format
+ */
 
-If everything is set up _correctly_, you should see your new app running in your _Android Emulator_ or _iOS Simulator_ shortly provided you have set up your emulator/simulator correctly.
+import React, { useEffect } from 'react';
+import {
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  useColorScheme,
+  View,
+} from 'react-native';
+import messaging from '@react-native-firebase/messaging';
 
-This is one way to run your app — you can also run it directly from within Android Studio and Xcode respectively.
+import { notificationListener, requestUserPermission } from './src/utils/notificationService';
+import {PermissionsAndroid} from 'react-native';
 
-## Step 3: Modifying your App
+function App() {
 
-Now that you have successfully run the app, let's modify it.
+  useEffect(() => {
+    PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS);
+    requestUserPermission();
+    notificationListener();
+  }, [])
+  
+  return (
+    <SafeAreaView style={{ flex: 1 }}>
+      <View style={{ flex: 1, justifyContent: 'center', alignSelf: 'center' }}>
+        <Text style={{ fontSize: 32 }}>Push Notification </Text>
+      </View>
+    </SafeAreaView>
+  );
+}
 
-1. Open `App.tsx` in your text editor of choice and edit some lines.
-2. For **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Developer Menu** (<kbd>Ctrl</kbd> + <kbd>M</kbd> (on Window and Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (on macOS)) to see your changes!
+const styles = StyleSheet.create({
+  sectionContainer: {
+    marginTop: 32,
+    paddingHorizontal: 24,
+  },
+  sectionTitle: {
+    fontSize: 24,
+    fontWeight: '600',
+  },
+  sectionDescription: {
+    marginTop: 8,
+    fontSize: 18,
+    fontWeight: '400',
+  },
+  highlight: {
+    fontWeight: '700',
+  },
+});
 
-   For **iOS**: Hit <kbd>Cmd ⌘</kbd> + <kbd>R</kbd> in your iOS Simulator to reload the app and see your changes!
+export default App;
 
-## Congratulations! :tada:
 
-You've successfully run and modified your React Native App. :partying_face:
-
-### Now what?
-
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [Introduction to React Native](https://reactnative.dev/docs/getting-started).
-
-# Troubleshooting
-
-If you can't get this to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
-
-# Learn More
-
-To learn more about React Native, take a look at the following resources:
-
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+------------------------------------------------------------------>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
